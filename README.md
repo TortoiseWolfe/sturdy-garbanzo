@@ -1,4 +1,5 @@
 # sturdy-garbanzo
+https://youtu.be/V2qZ_lgxTzg?si=jQae-X3ZFy93iAyX
 ## Autogen
 ```bash
 # Create the necessary sub-directories
@@ -17,8 +18,64 @@ echo 'Hello, World!\nThis is a test of AutoGen with the name: %(name)s' > autoge
 # Create a basic AutoGen definition file
 echo 'name = "AutoGen User";' > autogen/definitions/definitions.def
 
-# Create a basic app.py file in the src directory
-echo "print('Hello, World\!')" > src/app.py
+echo """
+import autogen
+
+def get_llm_config():
+    config_list = [
+        {
+            'model': 'gpt-4',
+            'api_key': 'API_KEY'
+        }
+    ]
+    llm_config = {
+        'request_timeout': 600,
+        'seed': 42,
+        'config_list': config_list,
+        'temperature': 0
+    }
+    return llm_config
+
+def create_assistant_agent():
+    llm_config = get_llm_config()
+    assistant = autogen.AssistantAgent(
+        name='CTO',
+        llm_config=llm_config,
+        system_message='Chief technical officer of a tech company'
+    )
+    return assistant
+
+def create_user_proxy_agent():
+    llm_config = get_llm_config()
+    user_proxy = autogen.UserProxyAgent(
+        name='user_proxy',
+        human_input_mode='NEVER',
+        max_consecutive_auto_reply=10,
+        is_termination_msg=lambda x: x.get('content', '').rstrip().endswith('TERMINATE'),
+        code_execution_config={'work_dir': 'web'},
+        llm_config=llm_config,
+        system_message='Reply TERMINATE if the task has been solved at full satisfaction. Otherwise, reply CONTINUE, or the reason why the task is not solved yet.'
+    )
+    return user_proxy
+
+def main():
+    assistant = create_assistant_agent()
+    user_proxy = create_user_proxy_agent()
+    
+    task1 = '''
+    Write python code to output numbers 1 to 100, and then store the code in a file
+    '''
+    user_proxy.initiate_chat(assistant, message=task1)
+    
+    task2 = '''
+    Change the code in the file you just created to instead output numbers 1 to 200
+    '''
+    user_proxy.initiate_chat(assistant, message=task2)
+
+if __name__ == '__main__':
+    main()
+""" > src/app.py
+
 
 
 # Create a blank docker-compose.yml file in the project root directory and populate it with the necessary content
@@ -39,9 +96,18 @@ services:\n\
 ```
 ```bash
 docker-compose run anaconda
-
 ```
 
+```bash
+# Create new conda environment
+conda create -n agen python=3.11.4
+# Activate the new environment
+conda activate agen
+# Install AutoGen
+pip install pyautogen
+# check version
+python --version
+```
 
 Yes, there are several Docker images available for setting up an Anaconda-based development environment. Here are some options:
 
